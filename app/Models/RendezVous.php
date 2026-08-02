@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RendezVous extends Model
 {
@@ -42,5 +43,10 @@ class RendezVous extends Model
     public function creePar(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cree_par');
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
     }
 }
