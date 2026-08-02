@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\RendezVousAnnule;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRendezVousRequest;
+use App\Http\Requests\UpdateStatutRendezVousRequest;
+use App\Mail\RdvConfirmationPatient;
+use App\Mail\RdvDemandeValidationMedecin;
 use App\Models\Medecin;
 use App\Models\RendezVous;
 use App\Services\CreneauxCalculator;
@@ -11,6 +15,8 @@ use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 
 class RendezVousController extends Controller
@@ -85,6 +91,27 @@ class RendezVousController extends Controller
             ]);
         }
 
+        $urlAccepter = URL::temporarySignedRoute('rdv.validation', now()->addHours(48), [
+            'rendezVous' => $rendezVous->id,
+            'action' => 'accepter',
+        ]);
+        $urlRefuser = URL::temporarySignedRoute('rdv.validation', now()->addHours(48), [
+            'rendezVous' => $rendezVous->id,
+            'action' => 'refuser',
+        ]);
+
+        // En file d'attente (jobs table) pour ne jamais bloquer la réponse HTTP sur
+        // l'envoi d'e-mail — nécessite qu'un worker tourne (`php artisan queue:work`)
+        // pour être effectivement délivré. Les Mailables re-chargent leurs relations
+        // eux-mêmes au moment de l'envoi (SerializesModels ne conserve pas l'eager load).
+        // Le mail au médecin n'est pas concerné par la préférence notif_email_rdv du
+        // patient : c'est une notification destinée au médecin, pas à lui.
+        if ($patient->notif_email_rdv) {
+            Mail::to($patient->email)->later(now(), new RdvConfirmationPatient($rendezVous));
+        }
+        Mail::to($medecin->loadMissing('user')->user->email)
+            ->later(now(), new RdvDemandeValidationMedecin($rendezVous, $urlAccepter, $urlRefuser));
+
         return response()->json([
             'data' => $rendezVous->load(['medecin.user:id,prenom,nom', 'medecin.specialite']),
             'message' => 'Rendez-vous créé avec succès.',
@@ -151,9 +178,40 @@ class RendezVousController extends Controller
             'motif_annulation' => $request->input('motif_annulation'),
         ]);
 
+        event(new RendezVousAnnule($rendezVous));
+
         return response()->json([
             'data' => $rendezVous->fresh(['medecin.user:id,prenom,nom', 'medecin.specialite']),
             'message' => 'Rendez-vous annulé.',
+        ]);
+    }
+
+    /**
+     * Le médecin marque un RDV honoré ou absent — uniquement sur ses propres RDV,
+     * et uniquement depuis un statut non final (en_attente/confirme).
+     */
+    public function changerStatut(UpdateStatutRendezVousRequest $request, RendezVous $rendezVous): JsonResponse
+    {
+        $medecin = $request->user()->medecin;
+
+        if (! $medecin || $rendezVous->medecin_id !== $medecin->id) {
+            return response()->json([
+                'data' => null,
+                'message' => 'Vous ne pouvez modifier que vos propres rendez-vous.',
+            ], 403);
+        }
+
+        if (! in_array($rendezVous->statut, ['en_attente', 'confirme'], true)) {
+            throw ValidationException::withMessages([
+                'statut' => ['Ce rendez-vous est déjà dans un état final ('.$rendezVous->statut.') et ne peut plus être modifié.'],
+            ]);
+        }
+
+        $rendezVous->update(['statut' => $request->validated()['statut']]);
+
+        return response()->json([
+            'data' => $rendezVous->fresh(['patient:id,prenom,nom']),
+            'message' => 'Statut du rendez-vous mis à jour.',
         ]);
     }
 }

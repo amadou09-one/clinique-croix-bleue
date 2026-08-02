@@ -91,8 +91,16 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
+        $user = $request->user();
+
+        // Le frontend médecin a besoin de son propre medecin_id (pour interroger
+        // /medecins/{id}/creneaux) et de sa spécialité (affichée dans la topbar).
+        if ($user->role === 'medecin') {
+            $user->loadMissing('medecin.specialite');
+        }
+
         return response()->json([
-            'data' => $request->user(),
+            'data' => $user,
             'message' => 'Utilisateur authentifié.',
         ]);
     }
