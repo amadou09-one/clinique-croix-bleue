@@ -29,6 +29,8 @@ class User extends Authenticatable
         'sexe',
         'date_naissance',
         'est_actif',
+        'notif_email_rdv',
+        'notif_email_rappel',
     ];
 
     /**
@@ -52,6 +54,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'date_naissance' => 'date',
             'est_actif' => 'boolean',
+            'notif_email_rdv' => 'boolean',
+            'notif_email_rappel' => 'boolean',
             'password' => 'hashed',
         ];
     }

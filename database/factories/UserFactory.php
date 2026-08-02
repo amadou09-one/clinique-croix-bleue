@@ -32,6 +32,8 @@ class UserFactory extends Factory
             'sexe' => fake()->randomElement(['F', 'M']),
             'date_naissance' => fake()->date(),
             'est_actif' => true,
+            'notif_email_rdv' => true,
+            'notif_email_rappel' => true,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
