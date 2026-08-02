@@ -94,6 +94,11 @@ class MedecinDashboardTest extends TestCase
 
     public function test_les_statistiques_du_medecin_sont_calculees_correctement(): void
     {
+        // Horaires ancrés à midi (via setTestNow) plutôt que relatifs à l'heure réelle
+        // d'exécution : sans ça, le test devient flaky près de minuit (subHours/addHours
+        // pouvant faire basculer un RDV sur le jour précédent/suivant).
+        Carbon::setTestNow(Carbon::today()->setTime(12, 0));
+
         $medecin = $this->creerMedecin();
         $this->creerRendezVous($medecin, Carbon::now()->subHours(2), 'honore');
         $this->creerRendezVous($medecin, Carbon::now()->addHours(2), 'confirme');
@@ -105,6 +110,8 @@ class MedecinDashboardTest extends TestCase
         $this->assertSame(2, $response->json('data.rdv_aujourdhui'));
         $this->assertSame(1, $response->json('data.patients_vus_aujourdhui'));
         $this->assertNotNull($response->json('data.prochain_patient'));
+
+        Carbon::setTestNow();
     }
 
     public function test_le_medecin_peut_marquer_son_propre_rdv_honore(): void
