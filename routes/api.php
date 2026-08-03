@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\MedecinProfilController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProfilController;
 use App\Http\Controllers\Api\RendezVousController;
+use App\Http\Controllers\Api\SecretaireController;
 use App\Http\Controllers\Api\SpecialiteController;
 use Illuminate\Support\Facades\Route;
 
@@ -59,6 +60,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/medecin/patients/{patient}', [MedecinPatientController::class, 'show']);
 
         Route::put('/medecin/profil', [MedecinProfilController::class, 'update']);
+    });
+
+    Route::middleware('role:secretaire')->group(function () {
+        Route::get('/secretaire/stats', [SecretaireController::class, 'stats']);
+        Route::get('/secretaire/planning', [SecretaireController::class, 'planning']);
+        Route::patch('/rendez-vous/{rendezVous}/confirmer', [RendezVousController::class, 'confirmer']);
     });
 
     Route::get('/specialites', [SpecialiteController::class, 'index']);

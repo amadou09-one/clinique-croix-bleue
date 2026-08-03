@@ -7,17 +7,21 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRendezVousRequest;
 use App\Http\Requests\UpdateStatutRendezVousRequest;
 use App\Mail\RdvConfirmationPatient;
+use App\Mail\RdvDecisionPatient;
 use App\Mail\RdvDemandeValidationMedecin;
 use App\Models\Medecin;
 use App\Models\RendezVous;
+use App\Notifications\RdvConfirmeNotification;
 use App\Services\CreneauxCalculator;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class RendezVousController extends Controller
 {
@@ -212,6 +216,44 @@ class RendezVousController extends Controller
         return response()->json([
             'data' => $rendezVous->fresh(['patient:id,prenom,nom']),
             'message' => 'Statut du rendez-vous mis à jour.',
+        ]);
+    }
+
+    /**
+     * Le secrétariat confirme un RDV en_attente au comptoir/téléphone — réutilise
+     * exactement le même e-mail et la même notification que lorsque le médecin
+     * accepte via le lien signé (voir RdvValidationController).
+     */
+    public function confirmer(Request $request, RendezVous $rendezVous): JsonResponse
+    {
+        if ($rendezVous->statut !== 'en_attente') {
+            return response()->json([
+                'data' => null,
+                'message' => "Ce rendez-vous n'est pas en attente de confirmation.",
+            ], 403);
+        }
+
+        $rendezVous->update(['statut' => 'confirme']);
+        $rendezVous->loadMissing(['patient', 'medecin.user', 'medecin.specialite']);
+
+        $envoyerEmail = $rendezVous->patient->notif_email_rdv;
+
+        if ($envoyerEmail) {
+            try {
+                Mail::to($rendezVous->patient->email)->send(new RdvDecisionPatient($rendezVous, true));
+            } catch (Throwable $e) {
+                Log::warning('Échec de l\'envoi de l\'e-mail de confirmation de RDV (secrétariat).', [
+                    'rendez_vous_id' => $rendezVous->id,
+                    'erreur' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        RdvConfirmeNotification::creer($rendezVous, $envoyerEmail ? 'email' : 'in_app');
+
+        return response()->json([
+            'data' => $rendezVous->fresh(['patient:id,prenom,nom', 'medecin.user:id,prenom,nom', 'medecin.specialite']),
+            'message' => 'Rendez-vous confirmé.',
         ]);
     }
 }
