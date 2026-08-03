@@ -11,10 +11,10 @@ RUN apt-get update && apt-get install -y \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
-# Apache doit servir public/ (front controller Laravel), pas la racine du repo
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
-    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
+# Apache doit servir public/ (front controller Laravel) avec AllowOverride All,
+# sinon le .htaccess de Laravel (rewrite vers index.php) est ignoré et toutes
+# les routes renvoient un 404 Apache brut au lieu de passer par Laravel.
+COPY docker/000-default.conf /etc/apache2/sites-available/000-default.conf
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
