@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | URL de l'application React (SPA), utilisée pour construire les liens
+    | envoyés par e-mail qui doivent pointer vers le frontend plutôt que vers
+    | cette API (ex : lien de définition de mot de passe).
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

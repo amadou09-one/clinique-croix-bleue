@@ -11,6 +11,7 @@ use App\Mail\RdvDecisionPatient;
 use App\Mail\RdvDemandeValidationMedecin;
 use App\Models\Medecin;
 use App\Models\RendezVous;
+use App\Models\User;
 use App\Notifications\RdvConfirmeNotification;
 use App\Services\CreneauxCalculator;
 use Carbon\Carbon;
@@ -30,16 +31,33 @@ class RendezVousController extends Controller
     }
 
     /**
-     * Création d'un rendez-vous par le patient authentifié.
+     * Création d'un rendez-vous — par le patient lui-même, ou par une secrétaire
+     * au comptoir pour un patient tiers (patient_id explicite dans ce cas).
      * Toute la logique de validité du créneau est recalculée côté serveur —
      * on ne fait jamais confiance à ce que le client prétend disponible.
+     *
+     * Sécurité : patient_id envoyé par un PATIENT est totalement ignoré — un
+     * patient authentifié ne peut jamais réserver "pour" un autre patient_id,
+     * quoi qu'il envoie dans le corps de la requête.
      */
     public function store(StoreRendezVousRequest $request): JsonResponse
     {
         $data = $request->validated();
         $medecin = Medecin::findOrFail($data['medecin_id']);
         $dateHeure = Carbon::parse($data['date_heure']);
-        $patient = $request->user();
+        $acteur = $request->user();
+
+        if ($acteur->role === 'secretaire') {
+            $patient = User::where('id', $data['patient_id'])->where('role', 'patient')->first();
+
+            if (! $patient) {
+                throw ValidationException::withMessages([
+                    'patient_id' => ['Ce patient est introuvable.'],
+                ]);
+            }
+        } else {
+            $patient = $acteur;
+        }
 
         if ($dateHeure->lte(Carbon::now())) {
             throw ValidationException::withMessages([
@@ -84,7 +102,7 @@ class RendezVousController extends Controller
                 'duree_min' => $this->calculator->dureeCreneau($medecin, $dateHeure),
                 'statut' => 'en_attente',
                 'motif' => $data['motif'] ?? null,
-                'cree_par' => $patient->id,
+                'cree_par' => $acteur->id,
             ]);
         } catch (QueryException $e) {
             // Filet de sécurité : la contrainte UNIQUE(medecin_id, date_heure) protège

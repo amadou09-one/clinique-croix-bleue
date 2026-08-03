@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BlocageController;
+use App\Http\Controllers\Api\DefinirMotDePasseController;
 use App\Http\Controllers\Api\DisponibiliteController;
 use App\Http\Controllers\Api\MedecinController;
 use App\Http\Controllers\Api\MedecinDashboardController;
@@ -11,11 +12,13 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProfilController;
 use App\Http\Controllers\Api\RendezVousController;
 use App\Http\Controllers\Api\SecretaireController;
+use App\Http\Controllers\Api\SecretairePatientController;
 use App\Http\Controllers\Api\SpecialiteController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/definir-mot-de-passe', [DefinirMotDePasseController::class, 'store']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -66,14 +69,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/secretaire/stats', [SecretaireController::class, 'stats']);
         Route::get('/secretaire/planning', [SecretaireController::class, 'planning']);
         Route::patch('/rendez-vous/{rendezVous}/confirmer', [RendezVousController::class, 'confirmer']);
+
+        Route::get('/secretaire/patients/recherche', [SecretairePatientController::class, 'recherche']);
+        Route::get('/secretaire/patients', [SecretairePatientController::class, 'index']);
+        Route::post('/secretaire/patients', [SecretairePatientController::class, 'store']);
     });
 
     Route::get('/specialites', [SpecialiteController::class, 'index']);
     Route::get('/medecins', [MedecinController::class, 'index']);
     Route::get('/medecins/{medecin}/creneaux', [MedecinController::class, 'creneaux']);
 
+    // La création de RDV est partagée patient/secrétaire (voir RendezVousController::store
+    // pour la logique de résolution du patient cible et la sécurité anti-usurpation).
+    Route::middleware('role:patient,secretaire')->post('/rendez-vous', [RendezVousController::class, 'store']);
+
     Route::middleware('role:patient')->group(function () {
-        Route::post('/rendez-vous', [RendezVousController::class, 'store']);
         Route::get('/mes-rendez-vous', [RendezVousController::class, 'mesRendezVous']);
         Route::patch('/rendez-vous/{rendezVous}/annuler', [RendezVousController::class, 'annuler']);
 
