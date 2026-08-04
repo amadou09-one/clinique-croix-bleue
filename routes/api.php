@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\AdminDashboardController;
+use App\Http\Controllers\Api\AdminUtilisateurController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BlocageController;
 use App\Http\Controllers\Api\DefinirMotDePasseController;
@@ -33,11 +35,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/preferences', [ProfilController::class, 'showPreferences']);
     Route::put('/preferences', [ProfilController::class, 'updatePreferences']);
 
-    Route::middleware('role:admin')->get('/admin/ping', function () {
-        return response()->json([
-            'data' => null,
-            'message' => 'pong admin',
-        ]);
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/admin/ping', function () {
+            return response()->json([
+                'data' => null,
+                'message' => 'pong admin',
+            ]);
+        });
+
+        Route::get('/admin/stats', [AdminDashboardController::class, 'stats']);
+
+        Route::get('/admin/utilisateurs', [AdminUtilisateurController::class, 'index']);
+        Route::post('/admin/utilisateurs', [AdminUtilisateurController::class, 'store']);
+        Route::put('/admin/utilisateurs/{utilisateur}', [AdminUtilisateurController::class, 'update']);
+        Route::delete('/admin/utilisateurs/{utilisateur}', [AdminUtilisateurController::class, 'destroy']);
     });
 
     Route::middleware('role:medecin')->group(function () {
