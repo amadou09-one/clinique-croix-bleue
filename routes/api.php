@@ -6,11 +6,14 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BlocageController;
 use App\Http\Controllers\Api\DefinirMotDePasseController;
 use App\Http\Controllers\Api\DisponibiliteController;
+use App\Http\Controllers\Api\DocumentMedicalController;
+use App\Http\Controllers\Api\MedecinConsultationController;
 use App\Http\Controllers\Api\MedecinController;
 use App\Http\Controllers\Api\MedecinDashboardController;
 use App\Http\Controllers\Api\MedecinPatientController;
 use App\Http\Controllers\Api\MedecinProfilController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PatientDossierController;
 use App\Http\Controllers\Api\ProfilController;
 use App\Http\Controllers\Api\RendezVousController;
 use App\Http\Controllers\Api\SecretaireController;
@@ -34,6 +37,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profil/mot-de-passe', [ProfilController::class, 'updatePassword']);
     Route::get('/preferences', [ProfilController::class, 'showPreferences']);
     Route::put('/preferences', [ProfilController::class, 'updatePreferences']);
+
+    // Téléchargement d'un document médical : accessible au patient propriétaire
+    // OU au médecin qui a déjà reçu ce patient — l'autorisation fine est faite
+    // dans le contrôleur, pas via le middleware role (les deux rôles y accèdent).
+    Route::get('/documents/{document}/telecharger', [DocumentMedicalController::class, 'telecharger']);
 
     Route::middleware('role:admin')->group(function () {
         Route::get('/admin/ping', function () {
@@ -72,6 +80,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/medecin/patients', [MedecinPatientController::class, 'index']);
         Route::get('/medecin/patients/{patient}', [MedecinPatientController::class, 'show']);
+        Route::post('/medecin/patients/{patient}/traitements', [MedecinPatientController::class, 'storeTraitement']);
+        Route::post('/medecin/patients/{patient}/documents', [MedecinPatientController::class, 'storeDocument']);
+
+        Route::post('/medecin/rendez-vous/{rendezVous}/consultation', [MedecinConsultationController::class, 'store']);
 
         Route::put('/medecin/profil', [MedecinProfilController::class, 'update']);
     });
@@ -97,6 +109,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:patient')->group(function () {
         Route::get('/mes-rendez-vous', [RendezVousController::class, 'mesRendezVous']);
         Route::patch('/rendez-vous/{rendezVous}/annuler', [RendezVousController::class, 'annuler']);
+
+        Route::get('/patient/dossier', [PatientDossierController::class, 'show']);
 
         Route::get('/patient/notifications', [NotificationController::class, 'index']);
         Route::get('/patient/notifications/non-lues/count', [NotificationController::class, 'nonLuesCount']);
