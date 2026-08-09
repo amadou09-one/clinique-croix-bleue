@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\AdminUtilisateurController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BlocageController;
+use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DefinirMotDePasseController;
 use App\Http\Controllers\Api\DisponibiliteController;
 use App\Http\Controllers\Api\DocumentMedicalController;
@@ -24,6 +25,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/definir-mot-de-passe', [DefinirMotDePasseController::class, 'store']);
+
+// Formulaire de contact du site vitrine — public, limité en fréquence pour éviter le spam.
+Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);

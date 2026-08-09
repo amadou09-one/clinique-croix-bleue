@@ -69,6 +69,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Adresse e-mail de l'administration
+    |--------------------------------------------------------------------------
+    |
+    | Destinataire des notifications internes (ex : formulaire de contact du
+    | site vitrine). Configurable via .env pour ne jamais coder une adresse
+    | en dur dans le code.
+    |
+    */
+
+    'contact_admin_email' => env('MAIL_ADMIN_ADDRESS', 'contact@croixbleue.sn'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
