@@ -29,6 +29,12 @@ Route::post('/definir-mot-de-passe', [DefinirMotDePasseController::class, 'store
 // Formulaire de contact du site vitrine — public, limité en fréquence pour éviter le spam.
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1');
 
+// Annuaire des médecins/spécialités — public (site vitrine + étape 1 de la prise de RDV,
+// consultés avant connexion).
+Route::get('/specialites', [SpecialiteController::class, 'index']);
+Route::get('/medecins', [MedecinController::class, 'index']);
+Route::get('/medecins/{medecin}/creneaux', [MedecinController::class, 'creneaux']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
@@ -101,10 +107,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/secretaire/patients', [SecretairePatientController::class, 'index']);
         Route::post('/secretaire/patients', [SecretairePatientController::class, 'store']);
     });
-
-    Route::get('/specialites', [SpecialiteController::class, 'index']);
-    Route::get('/medecins', [MedecinController::class, 'index']);
-    Route::get('/medecins/{medecin}/creneaux', [MedecinController::class, 'creneaux']);
 
     // La création de RDV est partagée patient/secrétaire (voir RendezVousController::store
     // pour la logique de résolution du patient cible et la sécurité anti-usurpation).
